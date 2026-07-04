@@ -27,8 +27,32 @@ def _require_european(option: Option) -> None:
         )
 
 
+def _deterministic_limit(option: Option) -> float | None:
+    """Price in the degenerate limits; None if the option is non-degenerate.
+
+    T = 0: the option is at expiry, worth intrinsic value.
+    sigma = 0: the underlying is deterministic, S_T = S e^{(r-q)T}, so the
+    option is worth the discounted certain payoff (forward intrinsic).
+    """
+    o = option
+    if o.maturity == 0.0:
+        return o.intrinsic()
+    if o.volatility == 0.0:
+        forward = o.spot * math.exp(-o.dividend_yield * o.maturity) - o.strike * math.exp(
+            -o.rate * o.maturity
+        )
+        payoff = forward if o.is_call else -forward
+        return max(payoff, 0.0)
+    return None
+
+
 def _d1_d2(option: Option) -> tuple[float, float]:
     o = option
+    if o.maturity == 0.0 or o.volatility == 0.0:
+        raise ValueError(
+            "Greeks are not defined in the zero-vol / zero-maturity limit "
+            "(delta degenerates to a step function)"
+        )
     sig_sqrt_t = o.volatility * math.sqrt(o.maturity)
     d1 = (
         math.log(o.spot / o.strike)
@@ -41,6 +65,9 @@ def price(option: Option) -> float:
     """Black-Scholes-Merton price of a European call or put."""
     _require_european(option)
     o = option
+    limit = _deterministic_limit(o)
+    if limit is not None:
+        return limit
     d1, d2 = _d1_d2(o)
     disc_spot = o.spot * math.exp(-o.dividend_yield * o.maturity)
     disc_strike = o.strike * math.exp(-o.rate * o.maturity)

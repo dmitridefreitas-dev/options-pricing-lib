@@ -29,6 +29,24 @@ def price(option: Option, steps: int = 500) -> float:
         raise ValueError(f"steps must be >= 1, got {steps}")
 
     o = option
+    payoff_sign = 1.0 if o.is_call else -1.0
+    if o.maturity == 0.0:
+        return o.intrinsic()
+    if o.volatility == 0.0:
+        # Deterministic underlying: S_t = S e^{(r-q)t}. European value is
+        # the discounted certain payoff; American is the best discounted
+        # exercise value along the deterministic path.
+        times = (
+            np.linspace(0.0, o.maturity, steps + 1)
+            if o.style is ExerciseStyle.AMERICAN
+            else np.array([o.maturity])
+        )
+        spots = o.spot * np.exp((o.rate - o.dividend_yield) * times)
+        exercise = np.exp(-o.rate * times) * np.maximum(
+            payoff_sign * (spots - o.strike), 0.0
+        )
+        return float(exercise.max())
+
     dt = o.maturity / steps
     u = math.exp(o.volatility * math.sqrt(dt))
     d = 1.0 / u
@@ -44,7 +62,6 @@ def price(option: Option, steps: int = 500) -> float:
     # Node j at step n has j up-moves: S * u^j * d^(n-j) = S * u^(2j - n).
     exponents = 2.0 * np.arange(steps + 1) - steps
     spots = o.spot * u**exponents
-    payoff_sign = 1.0 if o.is_call else -1.0
     values = np.maximum(payoff_sign * (spots - o.strike), 0.0)
 
     american = o.style is ExerciseStyle.AMERICAN

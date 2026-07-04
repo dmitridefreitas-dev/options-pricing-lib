@@ -23,9 +23,11 @@ class Option:
     Attributes:
         spot: Current underlying price S.
         strike: Strike price K.
-        maturity: Time to expiry T, in years.
+        maturity: Time to expiry T, in years. Zero means "at expiry":
+            every engine returns intrinsic value.
         rate: Continuously compounded risk-free rate r.
-        volatility: Annualised volatility sigma.
+        volatility: Annualised volatility sigma. Zero means a deterministic
+            underlying: engines return the discounted forward intrinsic.
         dividend_yield: Continuous dividend yield q.
         option_type: CALL or PUT.
         style: EUROPEAN or AMERICAN.
@@ -45,10 +47,10 @@ class Option:
             raise ValueError(f"spot must be positive, got {self.spot}")
         if self.strike <= 0.0:
             raise ValueError(f"strike must be positive, got {self.strike}")
-        if self.maturity <= 0.0:
-            raise ValueError(f"maturity must be positive, got {self.maturity}")
-        if self.volatility <= 0.0:
-            raise ValueError(f"volatility must be positive, got {self.volatility}")
+        if self.maturity < 0.0:
+            raise ValueError(f"maturity must be non-negative, got {self.maturity}")
+        if self.volatility < 0.0:
+            raise ValueError(f"volatility must be non-negative, got {self.volatility}")
 
     @property
     def is_call(self) -> bool:
