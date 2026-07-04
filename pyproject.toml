@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "optionslib"
+version = "0.1.0"
+description = "Option pricing: Black-Scholes, binomial tree, and Monte Carlo, cross-validated against each other, with full Greeks and implied-vol tools."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Dmitri De Freitas" }]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+    "ipykernel",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
