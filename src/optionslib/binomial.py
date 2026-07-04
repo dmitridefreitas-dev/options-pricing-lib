@@ -1,34 +1,58 @@
 """Cox-Ross-Rubinstein binomial tree — European and American exercise.
 
-STATUS: not implemented yet. The spec below is the contract; tests in
-tests/test_cross_validation.py are already written against it and are
-marked xfail until this module is done. Remove the xfail markers as you
-implement.
-
-Spec (CRR parameterisation):
+CRR parameterisation:
     dt = T / steps
     u  = exp(sigma * sqrt(dt)),  d = 1 / u
     p  = (exp((r - q) * dt) - d) / (u - d)      # risk-neutral up-probability
 
-    1. Build terminal payoffs at step N: S * u^j * d^(N-j), j = 0..N.
-    2. Roll back one step at a time, discounting at exp(-r * dt).
-    3. For AMERICAN style, at every node take
-       max(continuation, intrinsic) before stepping back.
+Terminal payoffs are rolled back one step at a time, discounting at
+exp(-r * dt); American exercise takes max(continuation, intrinsic) at every
+node. The rollback is a single numpy op per step, so 2000-step trees price
+in milliseconds.
 
-    Vectorise the rollback with numpy (one array op per step) — a Python
-    double loop will be ~100x slower and makes the convergence study painful.
-
-Acceptance criteria (encoded in tests):
-    European: |tree(steps=2000) - black_scholes| < 1e-3
-    American call, q=0: equals the European price (no early exercise)
-    American put: price >= European put (early-exercise premium >= 0)
+European prices converge to Black-Scholes at O(1/steps), with the classic
+odd/even sawtooth (see the convergence plot in the validation notebook).
 """
 
 from __future__ import annotations
 
-from optionslib.instruments import Option
+import math
+
+import numpy as np
+
+from optionslib.instruments import ExerciseStyle, Option
 
 
 def price(option: Option, steps: int = 500) -> float:
-    """Price a vanilla option on a CRR tree. See module docstring for spec."""
-    raise NotImplementedError("TODO: implement the CRR rollback (spec in module docstring)")
+    """Price a vanilla option on a CRR tree."""
+    if steps < 1:
+        raise ValueError(f"steps must be >= 1, got {steps}")
+
+    o = option
+    dt = o.maturity / steps
+    u = math.exp(o.volatility * math.sqrt(dt))
+    d = 1.0 / u
+    growth = math.exp((o.rate - o.dividend_yield) * dt)
+    p = (growth - d) / (u - d)
+    if not 0.0 < p < 1.0:
+        raise ValueError(
+            f"risk-neutral up-probability {p:.4f} outside (0, 1); "
+            "the drift per step exceeds the tree spacing — increase steps"
+        )
+    discount = math.exp(-o.rate * dt)
+
+    # Node j at step n has j up-moves: S * u^j * d^(n-j) = S * u^(2j - n).
+    exponents = 2.0 * np.arange(steps + 1) - steps
+    spots = o.spot * u**exponents
+    payoff_sign = 1.0 if o.is_call else -1.0
+    values = np.maximum(payoff_sign * (spots - o.strike), 0.0)
+
+    american = o.style is ExerciseStyle.AMERICAN
+    for step in range(steps - 1, -1, -1):
+        values = discount * (p * values[1:] + (1.0 - p) * values[:-1])
+        if american:
+            exponents = 2.0 * np.arange(step + 1) - step
+            spots = o.spot * u**exponents
+            values = np.maximum(values, payoff_sign * (spots - o.strike))
+
+    return float(values[0])
