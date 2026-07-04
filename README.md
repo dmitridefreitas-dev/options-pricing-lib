@@ -34,6 +34,13 @@ the two, as they must):
 
 ![BSM price and Greeks across spot](assets/greeks.png)
 
+**American exercise behaves the way theory demands**: computed on the same tree so
+discretisation error cancels, the early-exercise premium is exactly zero for a call on
+a non-dividend payer (Merton) and grows with moneyness for the put, which pins to
+intrinsic deep ITM:
+
+![American early-exercise premium vs spot](assets/american_premium.png)
+
 **The implied-vol surface round-trips**: synthetic quotes generated from a known smile
 are inverted back to vols that sit exactly on the true curves (max error ~1e-9 across
 the grid), for both smile slices and the full surface:
