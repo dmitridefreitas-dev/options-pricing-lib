@@ -1,5 +1,7 @@
 # options-pricing-lib
 
+📄 **[Report (PDF)](notebooks/options-pricing-lib-report.pdf)** · 📓 [interactive notebook](notebooks/demo.ipynb)
+
 **Implemented and cross-validated three option-pricing methods — Black-Scholes-Merton
 closed form, Cox-Ross-Rubinstein binomial tree, and Monte Carlo simulation — with full
 Greeks, an implied-volatility solver, and IV-surface construction.** Any one of these
