@@ -1,5 +1,7 @@
 # options-pricing-lib
 
+[![CI](https://github.com/dmitridefreitas-dev/options-pricing-lib/actions/workflows/ci.yml/badge.svg)](https://github.com/dmitridefreitas-dev/options-pricing-lib/actions/workflows/ci.yml)
+
 📄 **[Report (PDF)](notebooks/options-pricing-lib-report.pdf)** · 📓 [interactive notebook](notebooks/demo.ipynb)
 
 **Implemented and cross-validated three option-pricing methods — Black-Scholes-Merton
